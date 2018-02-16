@@ -10,18 +10,13 @@ public class NServer {
 	private int PORT = 30500;
 	private String IP = "127.0.0.1";
 
-	public NServer(int port, String iP) {
-		PORT = port;
-		IP = iP;
-	}
-
-	public void init() {
+	private void init() {
 		while (true) {
 			try {
 				serverSocket = new ServerSocket();
 				serverSocket.bind(new InetSocketAddress(IP, PORT));
 				Socket server = serverSocket.accept();
-				new Thread(new ServerThread(server)).start();
+				new Thread(new ServerListener(server)).start();
 			} catch (IOException e) {
 				e.printStackTrace();
 				closeResource();
@@ -37,5 +32,9 @@ public class NServer {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public static void main(String[] args) {
+		
 	}
 }

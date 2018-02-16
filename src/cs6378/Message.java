@@ -1,13 +1,31 @@
 package cs6378;
 
-public class Message implements Comparable<Message> {
-	private final int counter;
+import java.io.Serializable;
+
+public class Message implements Comparable<Message>, Serializable {
+	private final int clock;
 	private final String type;
 	private final int from;
 	private final int to;
 	
+	public int getClock() {
+		return clock;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public int getFrom() {
+		return from;
+	}
+
+	public int getTo() {
+		return to;
+	}
+
 	public Message(int counter, String type, int from, int to) {
-		this.counter = counter;
+		this.clock = counter;
 		this.type = type;
 		this.from = from;
 		this.to = to;
@@ -19,8 +37,11 @@ public class Message implements Comparable<Message> {
 
 	@Override
 	public int compareTo(Message o) {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.clock - o.clock;
 	}
 
+	@Override
+	public String toString() {
+		return clock + "," + type + "," + from + "," + to;
+	}
 }
