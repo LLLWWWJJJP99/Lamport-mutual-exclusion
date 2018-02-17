@@ -16,13 +16,11 @@ public class ClientListener implements Runnable {
 	@Override
 	public void run() {
 		try {
-System.out.println("ClientListener Starts To  Accept Message " + Thread.currentThread().getName());
-
 			Message message = null;
+			System.out.println("MyUID " + client.getUID());
 			while((message = (Message) br.readObject()) != null) {
-				System.out.println("MyUID " + client.getUID());
 				System.out.println(message + " : Client receive line from server");
-				//client.processMessage(message);
+				client.processMessage(message);
 			}
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();

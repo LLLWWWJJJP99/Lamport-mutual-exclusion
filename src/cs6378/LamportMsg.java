@@ -1,7 +1,7 @@
 package cs6378;
 
 public interface LamportMsg {
-	String REPLY = "@@";
-	String REQUEST = "**";
-	String RELEASE = "##";
+	String REPLY = "reply";
+	String REQUEST = "request";
+	String RELEASE = "release";
 }

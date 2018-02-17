@@ -1,4 +1,4 @@
-package cs6378.copy;
+package cs6378.copy.copy;
 
 public interface LamportMsg {
 	String REPLY = "reply";

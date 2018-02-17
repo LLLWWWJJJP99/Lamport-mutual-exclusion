@@ -1,4 +1,4 @@
-package cs6378.copy2;
+package cs6378.copy.copy;
 
 import java.io.BufferedReader;
 import java.io.File;

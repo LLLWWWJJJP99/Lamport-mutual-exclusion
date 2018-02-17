@@ -1,4 +1,4 @@
-package cs6378.copy4;
+package cs6378.copy.copy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

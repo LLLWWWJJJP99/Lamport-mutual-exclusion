@@ -37,7 +37,8 @@ public class Message implements Comparable<Message>, Serializable {
 
 	@Override
 	public int compareTo(Message o) {
-		return this.clock - o.clock;
+		int diff = this.clock - o.clock;
+		return diff != 0 ? diff : this.getFrom() - o.getFrom();
 	}
 
 	@Override

@@ -1,14 +1,18 @@
-package cs6378.copy4;
+package cs6378.copy.copy;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 
 import cs6378.Message;
 
@@ -21,6 +25,8 @@ public class NClient {
 	private Map<ObjectOutputStream, Integer> neighbors;
 	private static int numOfNeighbors;
 	private LamportClock clock;
+	private PrintWriter pw;
+	private File file;
 
 	public LamportClock getClock() {
 		return clock;
@@ -28,18 +34,15 @@ public class NClient {
 
 	private LamportMutux mutux;
 
-	private final int UID = 5;
+	private final int UID = 3;
 
 	public NClient() {
-		clock = new LamportClock(1);
-		mutux = new LamportMutux(this);
-
-		outcomingNeighbors = Collections.synchronizedMap(new HashMap<Integer, Socket>());
-		incomingNeighbors = Collections.synchronizedMap(new HashMap<Integer, Socket>());
-
-		neighbors = Collections.synchronizedMap(new HashMap<ObjectOutputStream, Integer>());
-		receivers = Collections.synchronizedMap(new HashMap<Integer, ObjectInputStream>());
-		senders = Collections.synchronizedMap(new HashMap<Integer, ObjectOutputStream>());
+		try {
+			file = new File(UID + "_log.txt");
+			pw = new PrintWriter(file);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public ServerSocket getMyServer() {
@@ -62,24 +65,38 @@ public class NClient {
 		return incomingNeighbors;
 	}
 
-	public int getUID() {
+	public synchronized int getUID() {
 		return UID;
 	}
 
 	public static void main(String[] args) {
 		NClient client = new NClient();
-		int[] nids = new int[] { 1, 2, 3, 4, 5 };
-		int[] ports = new int[] { 30000, 30001, 30002, 30003, 30004 };
-		String[] ips = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1" };
-		// int[] nids = new int[] { 1, 2, 3 };
-		// int[] ports = new int[] { 30000, 30001, 30002 };
-		// String[] ips = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1" };
+		// int[] nids = new int[] { 1, 2, 3, 4, 5 };
+		// int[] ports = new int[] { 30000, 30001, 30002, 30003, 30004 };
+		// String[] ips = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1",
+		// "127.0.0.1", "127.0.0.1" };
+		int[] nids = new int[] { 1, 2, 3 };
+		int[] ports = new int[] { 30000, 30001, 30002 };
+		String[] ips = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1" };
 
 		client.init(nids, ports, ips);
-		client.test();
+		// client.test();
+		client.generate();
+		// client.logInfo();
 	}
 
 	private void init(int[] ids, int[] ports, String[] ips) {
+
+		clock = new LamportClock(1);
+		mutux = new LamportMutux(this);
+
+		outcomingNeighbors = Collections.synchronizedMap(new HashMap<Integer, Socket>());
+		incomingNeighbors = Collections.synchronizedMap(new HashMap<Integer, Socket>());
+
+		neighbors = Collections.synchronizedMap(new HashMap<ObjectOutputStream, Integer>());
+		receivers = Collections.synchronizedMap(new HashMap<Integer, ObjectInputStream>());
+		senders = Collections.synchronizedMap(new HashMap<Integer, ObjectOutputStream>());
+
 		numOfNeighbors = ids.length - 1;
 		int myPort = 0;
 		for (int i = 0; i < ids.length; i++) {
@@ -117,7 +134,6 @@ public class NClient {
 
 		try {
 			myServer = new ServerSocket(myPort);
-			System.out.println("finish Setting up myserver");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -164,6 +180,10 @@ public class NClient {
 
 	}
 
+	public Map<ObjectOutputStream, Integer> getNeighbors() {
+		return neighbors;
+	}
+
 	public synchronized void broadcast(String type) {
 		if (type.equals(LamportMsg.REPLY)) {
 			System.err.println("error: cannnot broadcast reply message");
@@ -171,15 +191,15 @@ public class NClient {
 		}
 		this.clock.local_Event();
 		if (type.equals(LamportMsg.REQUEST)) {
-			mutux.queueRequest();
+			Message message = new Message(this.clock.getClock(), type, this.UID, this.UID);
+			mutux.queueRequest(message);
 		}
-		System.out.println("senders" + senders);
+		// System.out.println("senders" + senders);
 		for (Map.Entry<Integer, ObjectOutputStream> entry : senders.entrySet()) {
 			try {
 				ObjectOutputStream ps = entry.getValue();
-				System.out.println(this.clock + "||" + neighbors + "**" + this.UID);
 				Message message = new Message(this.clock.getClock(), type, this.UID, neighbors.get(ps));
-				System.out.println("message sent: " + message);
+				System.out.println("sent: " + message);
 				ps.writeObject(message);
 				ps.flush();
 			} catch (IOException e) {
@@ -189,6 +209,7 @@ public class NClient {
 	}
 
 	public synchronized void processMessage(Message message) {
+		System.out.println("start processing " + message);
 		this.clock.msg_event(message);
 		if (message.getType().equals(LamportMsg.RELEASE)) {
 			mutux.releaseMessage(message);
@@ -216,7 +237,46 @@ public class NClient {
 		}
 	}
 
-	public void generate() {
+	private void logInfo() {
+		pw.println(UID + " enters critical section");
+		pw.println("clock: " + clock.getClock());
+		pw.println("reply list:" + mutux.getPending_replies().toString());
+		pw.println(UID + " exits critical section");
+		pw.flush();
+	}
 
+	private void generate() {
+		int critical_section_times = 0;
+		Random rand = new Random();
+		while (true) {
+			int n = rand.nextInt(21);
+			try {
+				Thread.sleep(n * 50);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			if (critical_section_times > 0) {
+				System.out.println("I am done");
+			} else {
+
+				while (!mutux.criticalSection()) {
+					try {
+						Thread.sleep(1);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				
+				System.out.println(UID + " enters critical section");
+				logInfo();
+				System.out.println("clock: " + clock.getClock());
+				System.out.println("reply list:" + mutux.getPending_replies().toString());
+				critical_section_times++;
+				System.out.println(UID + " exits critical section");
+
+				mutux.releaseMessage();
+				broadcast(LamportMsg.RELEASE);
+			}
+		}
 	}
 }

@@ -1,4 +1,4 @@
-package cs6378.copy2;
+package cs6378.copy.copy;
 
 import cs6378.Message;
 
