@@ -15,7 +15,9 @@ import org.apache.commons.io.input.ReversedLinesFileReader;
 
 public class NServer {
 	private int PORT = 30500;
-	private static final String FILEPREFIX = ".//files//";
+	private static final int ID = 1;
+	private static final String FILEPREFIX = ".//files" + ID + "//";
+
 
 	private void run() {
 		try (ServerSocket server = new ServerSocket(PORT)) {

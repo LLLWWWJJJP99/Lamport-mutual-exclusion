@@ -8,9 +8,12 @@ import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -27,7 +30,9 @@ public class NClient {
 	private LamportClock clock;
 	private PrintWriter pw;
 	private File file;
-
+	private List<String> fileList;
+	private String[] remoteAddr;
+	private int[] remotePort;
 	public LamportClock getClock() {
 		return clock;
 	}
@@ -71,20 +76,36 @@ public class NClient {
 
 	public static void main(String[] args) {
 		NClient client = new NClient();
-		// int[] nids = new int[] { 1, 2, 3, 4, 5 };
-		// int[] ports = new int[] { 30000, 30001, 30002, 30003, 30004 };
-		// String[] ips = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1",
-		// "127.0.0.1", "127.0.0.1" };
-		int[] nids = new int[] { 1, 2, 3 };
-		int[] ports = new int[] { 30000, 30001, 30002 };
-		String[] ips = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1" };
-
+		 int[] nids = new int[] { 1, 2, 3, 4, 5 };
+		 int[] ports = new int[] { 30000, 30001, 30002, 30003, 30004 };
+		 String[] ips = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1",
+		 "127.0.0.1", "127.0.0.1" };
+//		int[] nids = new int[] { 1, 2, 3 };
+//		int[] ports = new int[] { 30000, 30001, 30002 };
+//		String[] ips = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1" };
+		
+		String[] serverIps = new String[] {"127.0.0.1", "127.0.0.1", "127.0.0.1"};
+		int[] serverPorts = new int[] { 30500, 30501, 30502 };
 		client.init(nids, ports, ips);
 		// client.test();
+		client.readServerConfig(serverPorts, serverIps);
 		client.generate();
 		// client.logInfo();
+		//client.testServerConnection();
 	}
-
+	
+	private void readServerConfig(int[] ports, String[] ips) {
+		this.remotePort = new int [ports.length];
+		for(int i = 0; i < ports.length; i++) {
+			remotePort[i] = ports[i];
+		}
+		
+		this.remoteAddr = new String[ips.length];
+		for(int i = 0; i < ips.length; i++) {
+			remoteAddr[i] = ips[i];
+		}
+	}
+	
 	private void init(int[] ids, int[] ports, String[] ips) {
 
 		clock = new LamportClock(1);
@@ -174,7 +195,13 @@ public class NClient {
 		mutux.cleanUp();
 		broadcast(LamportMsg.REQUEST);
 	}
-
+	
+	private synchronized void testServerConnection() {
+		for(int i = 0; i < 5; i++) {
+			executeCriticalSection();
+		}
+	}
+	
 	public void startWork() {
 		mutux.cleanUp();
 
@@ -222,7 +249,11 @@ public class NClient {
 			System.err.println("error: You receive wrong type of message");
 		}
 	}
-
+	
+	public synchronized void processServerMessage(Message message) {
+		
+	}
+	
 	public synchronized void privateMessage(Message message) {
 		if (!message.getType().equals(LamportMsg.REPLY)) {
 			System.err.println("error: only reply message could be sent privatly");
@@ -244,7 +275,77 @@ public class NClient {
 		pw.println(UID + " exits critical section");
 		pw.flush();
 	}
-
+	
+	// no synchronized??
+	private void executeCriticalSection() {
+		Random random = new Random();
+		if(fileList == null) {
+			int index = random.nextInt(remotePort.length);
+			try (Socket socket = new Socket(remoteAddr[index], remotePort[index]);) {
+				ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+				Message m = new Message(clock.getClock(), ServerMsg.ENQUIRY, UID, -1);
+				oos.writeObject(m);
+				oos.flush();
+				ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+				Message enquiry = (Message) ois.readObject();
+				String[] fileNames = enquiry.getContent().split(ServerMsg.SEPARATOR);
+				fileList = new ArrayList<String>(Arrays.asList(fileNames));
+				System.out.println("the list of files is " + fileList);
+				oos.close();
+				ois.close();
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		int n = random.nextInt(11);
+		if(n >= 4) {
+			int index = random.nextInt(remotePort.length);
+			try (Socket socket = new Socket(remoteAddr[index], remotePort[index]);) {
+				ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+				Message m = new Message(clock.getClock(), ServerMsg.READ, UID, -1);
+				int fileIndex = random.nextInt(fileList.size());
+				m.setContent(fileList.get(fileIndex));
+				oos.writeObject(m);
+				oos.flush();
+				ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+				Message read = (Message) ois.readObject();
+				System.out.println(UID + " Read Last Line from " + fileList.get(fileIndex) + " on " + remotePort[index] + ": " + read.getContent());
+				
+				oos.close();
+				ois.close();
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+			
+		}else {
+			int fileIndex = random.nextInt(fileList.size());
+			for(int i = 0; i < this.remotePort.length; i++) {
+				try (Socket socket = new Socket(remoteAddr[i], remotePort[i]);) {
+					ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+					Message m = new Message(clock.getClock(), ServerMsg.WRITE, UID, -1);
+					m.setContent(fileList.get(fileIndex) + ServerMsg.SEPARATOR + clock.getClock() + " " + UID);
+					
+					oos.writeObject(m);
+					oos.flush();
+					ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+					Message write = (Message) ois.readObject();
+					String type = write.getType();
+					
+					oos.close();
+					ois.close();
+					if(type.equals(ServerMsg.SUCCESS)) {
+						System.out.println("Client WRITE Last Line to " + fileList.get(fileIndex) + " on " + remotePort[i]);
+					}else {
+						System.err.println("Client WRITE Error");
+					}
+				} catch (IOException | ClassNotFoundException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
 	private void generate() {
 		int critical_section_times = 0;
 		Random rand = new Random();
@@ -255,7 +356,7 @@ public class NClient {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			if (critical_section_times > 0) {
+			if (critical_section_times > 4) {
 				System.out.println("I am done");
 			} else {
 				// what if use if below
@@ -268,6 +369,7 @@ public class NClient {
 				}
 				
 				System.out.println(UID + " enters critical section");
+				executeCriticalSection();
 				logInfo();
 				System.out.println("clock: " + clock.getClock());
 				System.out.println("reply list:" + mutux.getPending_replies().toString());
