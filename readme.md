@@ -2,10 +2,6 @@
 
 ## Instructor: Ravi Prakash
 
-## Assigned on: February 6, 2018
-
-## Due date and time: February 20, 2018, 11:59 pm
-
 This is an individual project and you are required to demonstrate its operation to the instructor and/or the TA to
 get credit for the project.
 
