@@ -1,4 +1,4 @@
-package cs6378.copy;
+package cs6378;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -20,24 +20,31 @@ import java.util.Random;
 import cs6378.Message;
 
 public class NClient {
+	// ServerSocket used to receive message from neighbors
 	private ServerSocket myServer;
+	// ObjectInputStream used to receive message from neighbors
 	private Map<Integer, ObjectInputStream> receivers;
+	// ObjectOutputStream used to send message to neighbors
 	private Map<Integer, ObjectOutputStream> senders;
 	private Map<Integer, Socket> outcomingNeighbors;
 	private Map<Integer, Socket> incomingNeighbors;
+	// used to send private message
 	private Map<ObjectOutputStream, Integer> neighbors;
 	private static int numOfNeighbors;
+	// files and their coresponding LamportClock
 	private Map<String, LamportClock> clocks;
 	private List<String> fileList;
+	// server ip and port
 	private String[] remoteAddr;
 	private int[] remotePort;
+	// files and their coresponding LamportMutux
 	private Map<String, LamportMutux> mutuxes;
+
 	public Map<String, LamportClock> getClocks() {
 		return clocks;
 	}
 
-
-	private final int UID = 2;
+	private final int UID = 1;
 
 	public ServerSocket getMyServer() {
 		return myServer;
@@ -65,15 +72,14 @@ public class NClient {
 
 	public static void main(String[] args) {
 		NClient client = new NClient();
-		 int[] nids = new int[] { 1, 2, 3, 4, 5 };
-		 int[] ports = new int[] { 30000, 30001, 30002, 30003, 30004 };
-		 String[] ips = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1",
-		 "127.0.0.1", "127.0.0.1" };
-//		int[] nids = new int[] { 1, 2, 3 };
-//		int[] ports = new int[] { 30000, 30001, 30002 };
-//		String[] ips = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1" };
-		
-		String[] serverIps = new String[] {"127.0.0.1", "127.0.0.1", "127.0.0.1"};
+		int[] nids = new int[] { 1, 2, 3, 4, 5 };
+		int[] ports = new int[] { 30000, 30001, 30002, 30003, 30004 };
+		String[] ips = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1", "127.0.0.1" };
+		// int[] nids = new int[] { 1, 2, 3 };
+		// int[] ports = new int[] { 30000, 30001, 30002 };
+		// String[] ips = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1" };
+
+		String[] serverIps = new String[] { "127.0.0.1", "127.0.0.1", "127.0.0.1" };
 		int[] serverPorts = new int[] { 30500, 30501, 30502 };
 		client.readServerConfig(serverPorts, serverIps);
 		client.enquireFileList();
@@ -81,31 +87,32 @@ public class NClient {
 		// client.test();
 		client.generate();
 		// client.logInfo();
-		//client.testServerConnection();
+		// client.testServerConnection();
 	}
-	
+
 	private void readServerConfig(int[] ports, String[] ips) {
-		this.remotePort = new int [ports.length];
-		for(int i = 0; i < ports.length; i++) {
+		this.remotePort = new int[ports.length];
+		for (int i = 0; i < ports.length; i++) {
 			remotePort[i] = ports[i];
 		}
-		
+
 		this.remoteAddr = new String[ips.length];
-		for(int i = 0; i < ips.length; i++) {
+		for (int i = 0; i < ips.length; i++) {
 			remoteAddr[i] = ips[i];
 		}
 	}
-	
+
+	// set up long connections to neighbors, and create lamport mutux lamport clock for different file
 	private void init(int[] ids, int[] ports, String[] ips) {
 
 		clocks = Collections.synchronizedMap(new HashMap<String, LamportClock>());
 		mutuxes = Collections.synchronizedMap(new HashMap<String, LamportMutux>());
-		
-		for(String fileName : fileList) {
+
+		for (String fileName : fileList) {
 			clocks.put(fileName, new LamportClock(1));
 			mutuxes.put(fileName, new LamportMutux(this));
 		}
-		
+
 		outcomingNeighbors = Collections.synchronizedMap(new HashMap<Integer, Socket>());
 		incomingNeighbors = Collections.synchronizedMap(new HashMap<Integer, Socket>());
 
@@ -115,6 +122,7 @@ public class NClient {
 
 		numOfNeighbors = ids.length - 1;
 		int myPort = 0;
+		// start other threads to connect to neghbors
 		for (int i = 0; i < ids.length; i++) {
 			if (UID == ids[i]) {
 				myPort = ports[i];
@@ -147,7 +155,7 @@ public class NClient {
 				}).start();
 			}
 		}
-
+		
 		try {
 			myServer = new ServerSocket(myPort);
 		} catch (IOException e) {
@@ -155,6 +163,7 @@ public class NClient {
 		}
 
 		System.out.println("finish Setting up outcoming connections");
+		//accept sockets from neghbors
 		for (int i = 0; i < ids.length; i++) {
 			try {
 				if (ids[i] != UID) {
@@ -179,6 +188,9 @@ public class NClient {
 		System.out.println("Program starts to works");
 	}
 
+	/**
+	 * start a new thread to listen on new messages from each neighbor
+	 */
 	private void listenToNeighbors() {
 		for (Map.Entry<Integer, ObjectInputStream> entry : receivers.entrySet()) {
 			ObjectInputStream br = entry.getValue();
@@ -189,24 +201,27 @@ public class NClient {
 	private synchronized void testClientConnection() {
 		String test = fileList.get(0);
 		LamportMutux mutux = mutuxes.get(test);
-		if(mutux == null) {
+		if (mutux == null) {
 			return;
 		}
 		mutux.cleanUp();
 		broadcast(LamportMsg.REQUEST, test);
 	}
-	
+
 	private synchronized void testServerConnection(String fileName) {
-		for(int i = 0; i < 5; i++) {
+		for (int i = 0; i < 5; i++) {
 			executeCriticalSection(fileName);
 		}
 	}
 	
-
 	public Map<ObjectOutputStream, Integer> getNeighbors() {
 		return neighbors;
 	}
-
+	
+	/**broadcast a release message or request message to neighbors to lock file with fileName
+	 * @param type type of message
+	 * @param fileName of file that will be locked
+	 */
 	public synchronized void broadcast(String type, String fileName) {
 		LamportClock clock = clocks.get(fileName);
 		LamportMutux mutux = mutuxes.get(fileName);
@@ -233,6 +248,10 @@ public class NClient {
 		}
 	}
 
+	/**
+	 * process a message according it's filename and type of the message
+	 * @param message
+	 */
 	public synchronized void processMessage(Message message) {
 		String fileName = message.getFileName();
 		LamportClock clock = clocks.get(fileName);
@@ -249,7 +268,11 @@ public class NClient {
 			System.err.println("error: You receive wrong type of message");
 		}
 	}
-	
+
+	/**
+	 * send a private message to neighbor
+	 * @param message to be sent
+	 */
 	public synchronized void privateMessage(Message message) {
 		LamportClock clock = clocks.get(message.getFileName());
 		if (!message.getType().equals(LamportMsg.REPLY)) {
@@ -264,9 +287,12 @@ public class NClient {
 			e.printStackTrace();
 		}
 	}
-	
+
+	/**
+	 * client enquire the list of files that are holded by servers
+	 */
 	private void enquireFileList() {
-		if(fileList == null) {
+		if (fileList == null) {
 			Random random = new Random();
 			int index = random.nextInt(remotePort.length);
 			try (Socket socket = new Socket(remoteAddr[index], remotePort[index]);) {
@@ -286,12 +312,17 @@ public class NClient {
 			}
 		}
 	}
+
 	
-	// no synchronized??
+	/**
+	 * client enters CriticalSection
+	 * randomly decide to read from or write a line to the given file on server
+	 * @param fileName
+	 */
 	private void executeCriticalSection(String fileName) {
 		Random random = new Random();
 		int n = random.nextInt(11);
-		if(n >= 4) {
+		if (n >= 4) {
 			int index = random.nextInt(remotePort.length);
 			try (Socket socket = new Socket(remoteAddr[index], remotePort[index]);) {
 				ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
@@ -301,33 +332,34 @@ public class NClient {
 				oos.flush();
 				ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 				Message read = (Message) ois.readObject();
-				System.out.println(UID + " Read Last Line from " + read.getFileName() + " on " + remotePort[index] + ": " + read.getContent());
-				
+				System.out.println(UID + " Read Last Line from " + read.getFileName() + " on " + remotePort[index]
+						+ ": " + read.getContent());
+
 				oos.close();
 				ois.close();
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
 			}
-			
-		}else {
-			for(int i = 0; i < this.remotePort.length; i++) {
+
+		} else {
+			for (int i = 0; i < this.remotePort.length; i++) {
 				try (Socket socket = new Socket(remoteAddr[i], remotePort[i]);) {
 					ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 					LamportClock clock = clocks.get(fileName);
 					Message m = new Message(clock.getClock(), ServerMsg.WRITE, UID, -1, fileName);
 					m.setContent(fileName + ServerMsg.SEPARATOR + clock.getClock() + " " + UID);
-					
+
 					oos.writeObject(m);
 					oos.flush();
 					ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 					Message write = (Message) ois.readObject();
 					String type = write.getType();
-					
+
 					oos.close();
 					ois.close();
-					if(type.equals(ServerMsg.SUCCESS)) {
+					if (type.equals(ServerMsg.SUCCESS)) {
 						System.out.println("Client WRITE Last Line to " + fileName + " on " + remotePort[i]);
-					}else {
+					} else {
 						System.err.println("Client WRITE Error");
 					}
 				} catch (IOException | ClassNotFoundException e) {
@@ -336,7 +368,11 @@ public class NClient {
 			}
 		}
 	}
-	
+
+	/**
+	 * message generator, clients randomly send request for a file and
+	 * wait until enters CriticalSection then broadcast release message
+	 */
 	private void generate() {
 		int critical_section_times = 0;
 		Random rand = new Random();
@@ -361,7 +397,7 @@ public class NClient {
 						e.printStackTrace();
 					}
 				}
-				
+
 				System.out.println(UID + " enters critical section");
 				executeCriticalSection(fileName);
 				LamportClock clock = clocks.get(fileName);

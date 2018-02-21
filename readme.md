@@ -40,7 +40,6 @@ the clients with appropriate messages –
 The set of files does not change during your program’s execution. Also, assume that there is no server failure during
 your program’s execution.
 
-### 1
 
 
 ```
@@ -59,16 +58,42 @@ some valuable time during the test runs and more importantly, from a panic situa
 Displaying appropriate log messages to the console or to a file is very important for testing, debugging and ana-
 lyzing the correctness of your program.
 
-## 4 Submission Information
-
-The submission should be through eLearning in the form of an archive consisting of:
-
-1. File(s) containing the source code.
-2. The README file, which describes how to run your program.
 
 ```
 NOTE: Do not submit unnecessary files.
 ```
-### 2
+
+## 4 How to Run the Project
+```
+Assume the ip address of the machines starts from dc01 dc01.utdallas.edu to dc45.utdallas.edu
+```
+The ips address from client1 to client2 is:
+dc01.utdallas.edu
+dc02.utdallas.edu
+dc03.utdallas.edu
+dc04.utdallas.edu
+dc05.utdallas.edu
+
+The ips address from server1 to server3 is:
+dc06.utdallas.edu
+dc07.utdallas.edu
+dc08.utdallas.edu
+
+1. All servers must be started before the clients, use java -jar <file name>.jar to run 3 servers on
+dc06.utdallas.edu
+dc07.utdallas.edu
+dc08.utdallas.edu
+These 3 machines. And each server should contain 3 folders which are used to store the server files.
+The root directory of these 3 folders should be the same as the server jar files. But the name of different text files 
+inside the folder does not matter.
+
+2. Then use java -jar <file name>.jar to run 5 clients at 
+
+dc01.utdallas.edu
+dc02.utdallas.edu
+dc03.utdallas.edu
+dc04.utdallas.edu
+dc05.utdallas.edu
+These 5 machines.
 
 

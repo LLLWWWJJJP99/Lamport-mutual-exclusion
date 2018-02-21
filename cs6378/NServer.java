@@ -18,7 +18,12 @@ public class NServer {
 	private static final int ID = 1;
 	private static final String FILEPREFIX = ".//files" + ID + "//";
 
-
+	
+	/**
+	 * server contineously  listen on port and receive request from client, 
+	 * then response a reply message back to client
+	 * depending on type of request message
+	 */
 	private void run() {
 		try (ServerSocket server = new ServerSocket(PORT)) {
 			while (true) {
@@ -26,7 +31,7 @@ public class NServer {
 				ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 				ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 				Message request = (Message) ois.readObject();
-				Message reply = new Message(-1, ServerMsg.SUCCESS, -1, -1);
+				Message reply = new Message(-1, ServerMsg.SUCCESS, -1, -1, request.getFileName());
 				if (request.getType().equals(ServerMsg.READ)) {
 					String fileName = request.getContent();
 					File file = new File(FILEPREFIX + fileName);

@@ -14,6 +14,7 @@ public class ClientListener implements Runnable {
 	@Override
 	public void run() {
 		try {
+			//ClientThread receive messages and send it to client
 			Message message = null;
 			System.out.println("MyUID " + client.getUID());
 			while((message = (Message) br.readObject()) != null) {

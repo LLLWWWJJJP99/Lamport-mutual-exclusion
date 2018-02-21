@@ -16,6 +16,10 @@ public class LamportClock {
 	public int getD() {
 		return d;
 	}
+	
+	/**receive a message and update local clock according to the message
+	 * @param message
+	 */
 	public void msg_event(Message message) {
 		this.clock += d;
 		if(message.getClock() + d > this.clock) {
@@ -26,7 +30,7 @@ public class LamportClock {
 	public static void main(String[] args) {
 		LamportClock clock = new LamportClock(10);
 		clock.clock = 2;
-		Message message = new Message(1, "", 1, 1);
+		Message message = new Message(1, "", 1, 1, "");
 		clock.msg_event(message);
 		System.out.println(clock.clock);
 	}

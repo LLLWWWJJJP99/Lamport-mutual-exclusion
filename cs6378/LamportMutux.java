@@ -1,4 +1,4 @@
-package cs6378.copy;
+package cs6378;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,8 +10,11 @@ import cs6378.Message;
 
 public class LamportMutux {
 	private NClient client;
+	// if send request then set it tobe true
 	private boolean send_request;
+	//priority queue that always place message with smallest time stamp at head of list
 	private List<Message> messageList;
+	//used to record unreceived message
 	private Set<Integer> pending_replies;
 
 	public LamportMutux(NClient client) {
@@ -26,7 +29,7 @@ public class LamportMutux {
 			}
 		});
 	}
-
+	//process a received reply message according to lamport algorithm
 	public synchronized void replyMessage(Message reply) {
 		if (reply.getType().equals(LamportMsg.REPLY) && send_request) {
 			pending_replies.remove(new Integer(reply.getFrom()));
@@ -35,7 +38,12 @@ public class LamportMutux {
 			System.err.println("Error: this not reply message");
 		}
 	}
-
+	
+	/**
+	 * this function will be called when client place one request message to it's own queue
+	 * meanwhile, add neighbors into pend_list as unreceived replies
+	 * @param message
+	 */
 	public synchronized void queueRequest(Message message) {
 		messageList.add(message);
 		
@@ -43,11 +51,18 @@ public class LamportMutux {
 		pending_replies.remove(new Integer(client.getUID()));
 		//send_request = true;
 	}
-
+	
 	public Set<Integer> getPending_replies() {
 		return pending_replies;
 	}
-
+	
+	
+	/**
+	 * this would be called by client receive request message from neighbors
+	 * then process message according to lamport algorithm
+	 * @param message
+	 * @return
+	 */
 	public synchronized Message requestMessage(Message message) {
 		if (message.getType().equals(LamportMsg.REQUEST)) {
 			this.messageList.add(message);
@@ -60,7 +75,13 @@ public class LamportMutux {
 			return null;
 		}
 	}
-
+	
+	
+	/**
+	 * client call this function to try to enter criticalSection for the given file
+	 * @param fileName
+	 * @return
+	 */
 	public synchronized boolean criticalSection(String fileName) {
 		if (!send_request) {
 			this.send_request = true;
@@ -82,6 +103,10 @@ public class LamportMutux {
 		this.messageList.clear();
 	}
 
+	/**
+	 * client process a release message from neighbors according to lamport algorithm
+	 * @param other release message
+	 */
 	public synchronized void releaseMessage(Message other) {
 		int sender = other.getFrom();
 		if (messageList.get(0).getFrom() == sender) {
@@ -90,7 +115,11 @@ public class LamportMutux {
 			System.err.println("Error: message at head of list is not the message from process entering cs");
 		}
 	}
-
+	
+	/**
+	 * client process a release message from itself according to lamport algorithm
+	 * @param other release message
+	 */
 	public synchronized void releaseMessage() {
 		if (send_request && messageList.get(0).getFrom() == client.getUID()) {
 			messageList.remove(0);
