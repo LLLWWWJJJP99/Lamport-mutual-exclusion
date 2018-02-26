@@ -65,20 +65,32 @@ Assume the ip address of the machines starts from dc01 dc01.utdallas.edu to dc45
 ```
 The ips address from client1 to client2 is:
 dc01.utdallas.edu
+
 dc02.utdallas.edu
+
 dc03.utdallas.edu
+
 dc04.utdallas.edu
+
 dc05.utdallas.edu
 
+
 The ips address from server1 to server3 is:
+
 dc06.utdallas.edu
+
 dc07.utdallas.edu
+
 dc08.utdallas.edu
 
 1. All servers must be started before the clients, use java -jar <file name>.jar to run 3 servers on
+
 dc06.utdallas.edu
+
 dc07.utdallas.edu
+
 dc08.utdallas.edu
+
 These 3 machines. And each server should contain 3 folders which are used to store the server files.
 The root directory of these 3 folders should be the same as the server jar files. But the name of different text files 
 inside the folder does not matter.
@@ -86,10 +98,15 @@ inside the folder does not matter.
 2. Then use java -jar <file name>.jar to run 5 clients at 
 
 dc01.utdallas.edu
+
 dc02.utdallas.edu
+
 dc03.utdallas.edu
+
 dc04.utdallas.edu
+
 dc05.utdallas.edu
+
 These 5 machines.
 
 
